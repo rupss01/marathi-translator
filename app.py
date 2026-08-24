@@ -127,17 +127,31 @@ if uploaded_file and st.button("Translate & Export Clean DOCX"):
             5. Do not write introduction, notes, or explanations.
             """
             
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[img, prompt]
-            )
+            # Robust API Call with Retries
+            max_retries = 3
+            translated_text = ""
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-2.0-flash',  # Stable supported vision model
+                        contents=[img, prompt]
+                    )
+                    translated_text = response.text
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        time.sleep(3)  # Wait for rate limit window
+                    else:
+                        st.error(f"Page {i+1} translate karne me issue aaya: {str(e)}")
             
-            output_doc.add_heading(f"Page {i+1}", level=1)
-            append_structured_content(output_doc, response.text)
-            if i < total_pages - 1:
-                output_doc.add_page_break()
-                
+            if translated_text:
+                output_doc.add_heading(f"Page {i+1}", level=1)
+                append_structured_content(output_doc, translated_text)
+                if i < total_pages - 1:
+                    output_doc.add_page_break()
+                    
             progress.progress((i + 1) / total_pages)
+            time.sleep(1)  # Safe delay between pages
             
         out_stream = io.BytesIO()
         output_doc.save(out_stream)
