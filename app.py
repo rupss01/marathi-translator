@@ -13,7 +13,10 @@ from google.genai import types
 st.set_page_config(page_title="Marathi to English Document Translator", layout="wide")
 st.title("📄 Marathi/Akruti Document ➔ Clean English DOCX")
 
-api_key = st.sidebar.text_input("Gemini API Key:", type="password")
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    api_key = st.sidebar.text_input("Gemini API Key:", type="password")
 
 def set_cell_background(cell, fill_hex="EAEAEA"):
     tcPr = cell._tc.get_or_add_tcPr()
