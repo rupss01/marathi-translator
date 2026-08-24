@@ -156,7 +156,7 @@ if uploaded_file and st.button("Translate & Export DOCX"):
             for attempt in range(max_retries):
                 try:
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-1.5-flash',
                         contents=[img, prompt]
                     )
                     translated_text = response.text
