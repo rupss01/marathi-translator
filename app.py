@@ -1,18 +1,20 @@
 import streamlit as st
 import io
 import re
+import time
 import pymupdf
 from PIL import Image
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
+from docx.shared import Pt
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 from google import genai
 from google.genai import types
 
-st.set_page_config(page_title="Marathi to English Document Translator", layout="wide")
+st.set_page_config(page_title="Marathi Document Translator", layout="wide")
 st.title("📄 Marathi/Akruti Document ➔ Clean English DOCX")
 
+# Automatic API key detection from Streamlit Secrets
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -64,9 +66,7 @@ def render_html_table_to_docx(doc, html_table_str):
                             r.font.size = Pt(9.5)
 
 def append_structured_content(doc, content):
-    # Strip any Marathi/Devanagari characters if generated accidentally
     content_no_marathi = re.sub(r'[\u0900-\u097F]+', '', content)
-    
     parts = re.split(r'(<table.*?>.*?</table>)', content_no_marathi, flags=re.DOTALL | re.IGNORECASE)
     
     for part in parts:
@@ -96,7 +96,7 @@ uploaded_file = st.file_uploader("Upload Marathi PDF Document", type=["pdf"])
 
 if uploaded_file and st.button("Translate & Export Clean DOCX"):
     if not api_key:
-        st.error("Kripya Gemini API Key daalein.")
+        st.error("Kripya Gemini API Key set karein.")
     else:
         client = genai.Client(api_key=api_key)
         pdf_doc = pymupdf.open(stream=uploaded_file.read(), filetype="pdf")
@@ -127,22 +127,21 @@ if uploaded_file and st.button("Translate & Export Clean DOCX"):
             5. Do not write introduction, notes, or explanations.
             """
             
-            # Robust API Call with Retries
             max_retries = 3
             translated_text = ""
             for attempt in range(max_retries):
                 try:
                     response = client.models.generate_content(
-                        model='gemini-2.0-flash',  # Stable supported vision model
+                        model='gemini-2.0-flash',
                         contents=[img, prompt]
                     )
                     translated_text = response.text
                     break
                 except Exception as e:
                     if attempt < max_retries - 1:
-                        time.sleep(3)  # Wait for rate limit window
+                        time.sleep(3)
                     else:
-                        st.error(f"Page {i+1} translate karne me issue aaya: {str(e)}")
+                        st.error(f"Page {i+1} error: {str(e)}")
             
             if translated_text:
                 output_doc.add_heading(f"Page {i+1}", level=1)
@@ -151,7 +150,7 @@ if uploaded_file and st.button("Translate & Export Clean DOCX"):
                     output_doc.add_page_break()
                     
             progress.progress((i + 1) / total_pages)
-            time.sleep(1)  # Safe delay between pages
+            time.sleep(1)
             
         out_stream = io.BytesIO()
         output_doc.save(out_stream)
